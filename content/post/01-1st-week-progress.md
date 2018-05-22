@@ -21,7 +21,7 @@ The previous TinyVMI project[1] was a minimal portion of LibVMI with capability 
 
 **Partial tested with function map_addr and event_example.** Now TinyVMI is able to support Xen Events, with Xen version of 4.10.0, and target VM running Ubuntu 16.04 64-bit, with kernel version 4.4.0.
 
-**Blog via Hugo:** Two websites were built with individual repo: one for [documentation of TinyVMI](https://tinyvmi.github.io), one for [GSoC blog progress posts](https://tingyvmi.github.io/gsoc-blog). 
+**Blog via Hugo:** Two websites were built with individual repo: one for [documentation of TinyVMI](https://tinyvmi.github.io), one for [GSoC blog progress posts](https://tinyvmi.github.io/gsoc-blog). 
 
 ## What to do next:
 
