@@ -1,0 +1,37 @@
+title = "TinyVMI"
+baseURL = "https://tinyvmi.github.io/gsoc-blog"
+languageCode = "en-us"
+theme = "ananke"
+#themesDir = "../.."
+
+publishDir = "../tinyvmi-blog-pub.git/"
+
+
+MetaDataFormat = "yaml"
+DefaultContentLanguage = "en"
+SectionPagesMenu = "main"
+Paginate = 3 # this is set low for demonstrating with dummy content. Set to a higher number
+googleAnalytics = ""
+enableRobotsTXT = true
+
+[sitemap]
+  changefreq = "monthly"
+  priority = 0.5
+  filename = "sitemap.xml"
+
+color = "bg-black"
+
+[params]
+  favicon = ""
+  description = "Blog Posts for Progress in Google Summer of Code 2018"
+  github = "https://github.com/tinyvmi/tinyvmi"
+  facebook = ""
+  twitter = "https://twitter.com/cnlelema"
+  instagram = ""
+  youtube = ""
+  linkedin = ""
+  # choose a background color from any on this page: http://tachyons.io/docs/themes/skins/ and preface it with "bg-"
+  background_color_class = "bg-black"
+  #featured_image = "/images/gohugo-default-sample-hero-image.jpg"
+  featured_image = ""
+  recent_posts_number = 3
