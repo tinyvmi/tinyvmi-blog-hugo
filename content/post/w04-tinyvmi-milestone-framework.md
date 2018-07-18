@@ -8,7 +8,7 @@ description = "First Milestone Achieved by Porting Main Framework of LibVMI into
 
 
 ### 1. Milestone Goal: "Port the skeleton of LibVMI and system library dependencies"
-The goal of the first milestone is described as following in the proposal to GSoC 2018:
+The goal of the first milestone is described as following in the [proposal to GSoC 2018](https://docs.google.com/document/d/1Y0qOjpXog0DjJoBygMCIGwZXvNaYgaADfuQB1mEJ9mI/edit?usp=sharing):
 
 > Since the previous work of TinyVMI already proved the feasibility of porting LibVMI into MiniOS, we can take further steps to port as many modules as possible into MiniOS. We should a) try to keep the original LibVMI file/folder structure unless we have to change it to adopt the MiniOS features. b) deleting all the dynamic library dependencies and converting them into static library functions. These include but not limited to some libxenstore, libxencontrol functions. c) implement all the functions that have dependence on the libraries that are unavailable in MiniOS. These include but not limited to some glib function/structures like: GHashTable, GSList, etc..
 > 

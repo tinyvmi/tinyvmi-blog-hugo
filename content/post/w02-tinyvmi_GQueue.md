@@ -1,7 +1,7 @@
 +++
 title =  "GQueue Ported to TinyVMI"
 date = 2018-05-28T13:21:22-04:00
-tags = ["progress", "dependences"]
+tags = ["progress", "dependences" ]
 featured_image = ""
 description = "add support for LRU cache list in LibVMI"
 +++
