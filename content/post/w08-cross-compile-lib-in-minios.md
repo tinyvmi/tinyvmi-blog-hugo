@@ -94,4 +94,10 @@ make tinyvmi-stubdom
 {{</highlight>}}
 
 If succeed, you will find the static library file (such as libjson-c.a) under the directory **$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf** (will be  /xen-src/stubdom/cross-root-x86_64/x86_64-xen-elf/lib/libjson-c.a for libjson-c)
-If errors occur, you might need to tweak the configurations and building options of the library by reading the documentation shipped with the library source code. That's all. Thank you!
+If errors occur, you might need to tweak the configurations and building options of the library by reading the documentation shipped with the library source code.
+
+
+## Example 2: TODO: cross compile GCC C++ standard library to Mini-OS. 
+
+- Configure command.
+- Makefile examples.

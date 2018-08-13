@@ -129,7 +129,8 @@ Furthermore, security applications written in C++ programs can also be ported in
 
 - Support of LibVMI functions to introspect Linux and Windows guest on x86 architecture. Both **memory access** and **event support** are implemented. ARM architecture and other OS kernels (such as FreeBSD) have not been explored yet.
 - A customized [GLib](https://github.com/tinyvmi/tinyvmi/tree/master/tiny-vmi/tiny_glib), a statically compiled [libjson-c](https://github.com/json-c/json-c), and [libjansson](http://www.digip.org/jansson/) were cross compiled into Mini-OS.
-- C++ language support. C++ standard library from GCC was cross compiled into static libraries, such as libgcc, libstdc++, etc. Now in Mini-OS, we can program with C++ ! not only C. Detailed steps can be found in [this post](https://tinyvmi.github.io/gsoc-blog/post/w12-cpp-cross-compile/).
+- C++ language support. C++ standard library from GCC was cross compiled into static libraries, such as libgcc, libstdc++, etc. Now in Mini-OS, we can program with C++ ! not only C. Detailed steps can be found in [this post](https://tinyvmi.github.io/gsoc-blog/post/w08-cross-compile-lib-in-minios/).
+- A github site of [Documentations](https://tinyvmi.github.io) and a [Blog](https://tinyvmi.github.io/gsoc-blog) are maintained to document the manuals of how to build and run TinyVMI, as well as track the progress of each proceeded step during the summer. 
 
 ### Performance Analysis
 
