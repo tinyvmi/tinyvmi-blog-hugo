@@ -1,5 +1,6 @@
 title = "TinyVMI"
 baseURL = "https://tinyvmi.github.io/gsoc-blog"
+# baseURL = "http://localhost:1313/gsoc-blog"
 languageCode = "en-us"
 theme = "ananke"
 #themesDir = "../.."
@@ -37,3 +38,4 @@ color = "bg-black"
   featured_image = ""
   recent_posts_number = 3
   toc = true
+  custom_css = ["css/mycss.css"]
