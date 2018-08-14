@@ -61,7 +61,7 @@ First, Xen hypervisor isolates each guest VM from reading other VM's memory page
 
 ### Permissions of Accessing Other VM's Memory
 
-To introspect a VM's memory from another guest VM, the first thing is to get permissions from the Xen hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. However, Xen hypervisor allow programmers to open communication channels between two VMs, either by grant page tables or event channels. LibVMI uses grant page tables to remap memory pages from target VM to its own memory space. The permission of granting page tables between VMs are controlled by Xen Security Module (XSM). 
+To introspect a VM's memory from another guest VM, the first thing is to get permissions from the Xen hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. Although Xen hypervisor allow programmers to share memory pages between two VMs by grant tables, it requires the target VM to explicitly `offer` the page for sharing. Since entire target VM is not trusted and no changes should be made to the target VM. LibVMI uses foreign memory mapping hypercalls to remap memory pages from target VM to its own memory space. The permission of mapping a foreign page (target VM's page) to its own address space for a guest VM (or Dom0) are controlled by Xen Security Module (XSM). 
 
 [Xen Security Module](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK) (XSM) uses FLASK policies as in SELinux, to enforce Mandatory Access Control(MAC) between different domains. Each permission is default to be denied unless explicitly being allowed in the policy. Permissions are granted according to multiple categries the guest domain belongs to, such as the types, roles, users, and attributes of the guest domain [more](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK#Types.2C_roles.2C_users_and_attributes). 
 
@@ -117,9 +117,9 @@ xenstore-chmod -r '/local/domain' r8
 The next challenge is building new libraries into Mini-OS. 
 Mini-OS is a examplar minimal operating system designed to running on Xen hypervisor. To keep the kernel small, there are only few libraries can be built in it: **newlib** for C language library, Xen related library such as **libxc** to communicate with Xen hypervisor, and **lwip** for basic networking. 
 
-To port LibVMI to Mini-OS, 3 more libraries are needed. These include two JSON libraries to parse Rekall profiles, ``libjson-c`` and ``libjansson``, and library with some utility data structures such as [GLib](https://wiki.gnome.org/Projects/GLib). 
+To port LibVMI to Mini-OS, 2 more libraries are needed. These include one JSON library to parse Rekall profiles, [libjson-c](https://github.com/json-c/json-c), and one library with utility data structures, [GLib](https://wiki.gnome.org/Projects/GLib). 
 
-In theory, most libraries written in C language can be built into Mini-OS with the help of **newlib**, such as ``libjson-c``, and ``libjasson``. [This post](https://tinyvmi.github.io/gsoc-blog/post/w08-cross-compile-lib-in-minios) introduces how to build new libraries. However, some of them might need to be manually customized for MiniOS by eliminating the unsupported portions, such as [GLib](https://developer.gnome.org/glib/).
+In theory, most libraries written in C language can be built into Mini-OS with the help of **newlib**, such as **libjson-c**. [This post](https://tinyvmi.github.io/gsoc-blog/post/w08-cross-compile-lib-in-minios) introduces how to build new libraries. However, some of them might need to be manually customized for MiniOS by eliminating the unsupported portions, such as [GLib](https://developer.gnome.org/glib/).
 
 Furthermore, security applications written in C++ programs can also be ported into Mini-OS. For example, [DRAKVUF](https://drakvuf.com/) is a binary analysis system built ontop of LibVMI and Xen. Portion of its code are in C++ language. To built those code in Mini-OS, we need to cross compile C++ standard libraries into the tiny kernel.
 
