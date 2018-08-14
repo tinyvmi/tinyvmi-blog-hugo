@@ -15,8 +15,8 @@ This post introduces the project I worked on with Honeynet Project at Google Sum
 
 ### Mini-OS & Unikernels
 
-[Mini-OS](https://wiki.xenproject.org/wiki/Mini-OS) is a tiny operating system demo distributed with the Xen hypervisor sources. It has been a basis for development of serveral unikernels, such as including ClickOS and Rump kernels. 
-Unikernels, such as Mini-OS, can be viewed as a minimized operating system with following features:
+[Mini-OS](https://wiki.xenproject.org/wiki/Mini-OS) is a tiny operating system demo distributed with the Xen hypervisor sources. It has been a basis for development of serveral unikernels, such as ClickOS and Rump kernels. 
+Unikernels can be viewed as a minimized operating system with following features:
 
 - No ring0/ring3, or kernel/user mode separation. Traditional operating systems, like Linux, separate programs into kernel mode and user mode to protect malicious users (applications) from accessing kernel memory. However, in unikernels like Mini-OS, there is only one mode, ring0, or kernel mode. This eliminates the burden of maintaining the context-switching between two modes. The code size of the kernel and runtime overhead are both reduced. 
 
@@ -30,12 +30,12 @@ Unikernels, such as Mini-OS, can be viewed as a minimized operating system with 
 </figure>
 
 
-As shown in Fig.1, a unikernel is much smaller in size and eliminates all unnecessary tools and libraries, and even file systems from the OS, keeping only the application code and a tiny OS kernel. Such unikernels can be much more efficient than traditional operating systems, especially for cloud platforms where each specialized application is usually managed in a standalone VM. The unikernels are supposed to be the next generation of cloud platform because they can achieve efficiency from several aspects. Those include but not limited to:
+As shown in Fig.1, a unikernel is much smaller in size and eliminates all unnecessary tools and libraries, and even file systems from the OS, keeping only the application code and a tiny OS kernel. Such unikernels can be more efficient than traditional operating systems, especially for cloud platforms where each specialized application is usually managed in a standalone VM. The unikernels are supposed to be the next generation of cloud platform because they can achieve efficiency from several aspects. These include but not limited to:
 
 1. Less memmory footprint. A unikernel requires significantly less memory than a traditional operating system. For example, a Mini-OS VM with LibVMI application only requires 64MB of main memory. However, a Linux VM would occupy 4GB of main memory to get average performance for a 64-bit Linux. The reduced memory footprints would allow a single physical machine to host more VMs and reduce the average cost per service. 
 2. Faster booting. Since the memory footprint is small and no redundant libraries or kernel modules, a tiny OS would require significant less time to boot than a traditional OS. Booting a tinyOS is just like to start the application itself. 
 3. No kernel mode switching. OS kernels and applications are in a same chunk of memory region. CPU context switches caused by system calls are eliminated in unikernels. Therefore, the runtime performance of the unikernels can be much better than a traditional OS.
-4. More secure. Each unikernel's VM runs only one application. Isolation of applications is enforced by the hypervisor, instead of a shared OS kernel. Compared to process isolation or container isolation in a shared Linux, the unikernel is more secure from the lower level isolation.
+4. More secure. Each unikernel's VM runs only one application. Isolation between  applications is enforced by the hypervisor, instead of a shared OS kernel. Compared to process isolation or container isolation in a shared Linux, the unikernel is more secure from the lower level isolation.
 5. Easy deployment, easy to use. Unikernel applications are build into a single binary to run directly as a VM image, which simplifies the deployment of the service. Unikernel applications are designed to be _single click and run_. All functionalities are customized at building time. Once deployed, the binary package requires no human modifications except the whole binary package being replaced. 
 
 In brief, Mini-OS is a tiny OS originated from Xen hypervisor. As most other unikernels, Mini-OS could provide higher performance and more secure computing environment than a traditional operating system on the cloud.
@@ -44,9 +44,9 @@ In brief, Mini-OS is a tiny OS originated from Xen hypervisor. As most other uni
 
 LibVMI is a secure critical library that could be used to view a target VM's raw memory from another guest VM, thus gaining a whole view of almost all the activities on the target VM. 
 
-Traditionally, LibVMI is running in Dom0 on Xen. However, Dom0 is already very big even without LibVMI in it. I got the idea of separating LibVMI from Dom0 from the the following observations:
+Traditionally, LibVMI runs in Dom0 on Xen. However, Dom0 is already very big even without LibVMI in it. I got the idea of separating LibVMI from Dom0 from the the following observations:
 
-1. Dom0 is a general purpose OS hosting many daily use applications, such as administractor tools. However, LibVMI is a special purpose library and usually not for daily use. Furthermore, there are almost no direct communication between LibVMI and other applications. Thus it not necessary to install LibVMI in Dom0.
+1. Dom0 is a general purpose OS hosting many daily use applications, such as administractor tools. However, LibVMI is a special purpose library and usually not for daily use. Furthermore, there are almost no direct communication between LibVMI and other applications. Thus it is not necessary to install LibVMI in Dom0.
 
 2. Security risk. Dom0 is a critical domain for the hypervisor platform. Introducing new code base to the kernel would also introduce new security risk. Other applications on Dom0 could leverage kernel vulnerability to compromise LibVMI, and vice versa, a bug in LibVMI would possible crash other applications or even the entire Dom0 kernel.
 
@@ -61,11 +61,11 @@ First, Xen hypervisor isolates each guest VM from reading other VM's memory page
 
 ### Permissions of Accessing Other VM's Memory
 
-To introspect a VM's memory from another guest VM, the first thing is to get permissions from the Xen hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. Although Xen hypervisor allow programmers to share memory pages between two VMs by grant tables, it requires the target VM to explicitly `offer` the page for sharing. Since entire target VM is not trusted and no changes should be made to the target VM. LibVMI uses foreign memory mapping hypercalls to remap memory pages from target VM to its own memory space. The permission of mapping a foreign page (target VM's page) to its own address space for a guest VM (or Dom0) are controlled by Xen Security Module (XSM). 
+To introspect a VM's memory from another guest VM, the first thing is to get permissions from the Xen hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. Although Xen hypervisor allow programmers to share memory pages between two VMs by grant tables, it requires the target VM to explicitly `offer` the page for sharing. Since entire target VM is not trusted and no changes should be made to the target VM. LibVMI uses foreign memory mapping hypercalls to remap memory pages from target VM to its own memory space. The permission of mapping a foreign page (target VM's page) to its own address space for a guest VM (or Dom0) are controlled by Xen Security Module (XSM), which will be introduced below. 
 
 Furthermore, Xen event channels allow guest VM to monitor its memory status in real time under help of hardware interrupts. A ring buffer is shared between hypervisor and the guest kernel to transfer event information. To access the ring buffer, XSM permission should also be granted. 
 
-[Xen Security Module](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK) (XSM) uses FLASK policies as in SELinux, to enforce Mandatory Access Control(MAC) between different domains. Each permission is default to be denied unless explicitly being allowed in the policy. Permissions are granted according to multiple categries the guest domain belongs to, such as the types, roles, users, and attributes of the guest domain [more](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK#Types.2C_roles.2C_users_and_attributes). 
+[Xen Security Module](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK) (XSM) uses FLASK policies as in SELinux, to enforce Mandatory Access Control(MAC) between different domains. Each permission is default to be denied unless explicitly being allowed in the policy. Permissions are granted according to multiple categries the guest domain belongs to, such as the types, roles, users, and attributes of the guest domain ([more](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK#Types.2C_roles.2C_users_and_attributes)). 
 
 
 The category of a VM is labeled in the configuration file we use to create it via ``xl create <config_file>``. For example: 
@@ -130,8 +130,8 @@ Furthermore, security applications written in C++ programs can also be ported in
 ### Functions added to Mini-OS
 
 - Support of LibVMI functions to introspect Linux and Windows guest on x86 architecture. Both **memory access** and **event support** are implemented. ARM architecture and other OS kernels (such as FreeBSD) have not been explored yet.
-- A customized [GLib](https://github.com/tinyvmi/tinyvmi/tree/master/tiny-vmi/tiny_glib), a statically compiled [libjson-c](https://github.com/json-c/json-c), and [libjansson](http://www.digip.org/jansson/) were cross compiled into Mini-OS.
-- C++ language support. C++ standard library from GCC was cross compiled into static libraries, such as libgcc, libstdc++, etc. Now in Mini-OS, we can program with C++ ! not only C. Detailed steps can be found in [this post](https://tinyvmi.github.io/gsoc-blog/post/w08-cross-compile-lib-in-minios/).
+- A customized [GLib](https://github.com/tinyvmi/tinyvmi/tree/master/tiny-vmi/tiny_glib), a statically compiled [libjson-c](https://github.com/json-c/json-c) is cross compiled into Mini-OS.
+- C++ language support. C++ standard library from GCC was cross compiled into static libraries, such as libgcc, libstdc++, etc. Now in Mini-OS, we can program with C++ ! Not only C. Detailed steps can be found in [this post](https://tinyvmi.github.io/gsoc-blog/post/w08-cross-compile-lib-in-minios/).
 - A github site of [Documentations](https://tinyvmi.github.io) and a [Blog](https://tinyvmi.github.io/gsoc-blog) are maintained to document the manuals of how to build and run TinyVMI, as well as track the progress of each proceeded step during the summer. 
 
 ### Performance Analysis
@@ -153,13 +153,13 @@ Results are shown in Fig.2 and Fig.3.
 </figcaption> 
 </figure>
 
-Fig.2 shows the overall code size of the OS with LibVMI in it. LibVMI with MiniOS totaled 83K LoC while LibVMI with Linux kernel had 177K LoC, reducing more then 50% percent of code size. Note that the LoC of Linux kernel does not include any driver codes, which reveals the possible minimal size of a Linux kernel. If drivers included, it could be 15M+ LoC for Linux system. 
+Fig.2 shows the overall code size of the OS with LibVMI in it. LibVMI with MiniOS totaled 83K Lines of Code (LoC) while LibVMI with Linux kernel had 177K LoC, reducing more then 50% percent of code size. Note that the LoC of Linux kernel does not include any driver codes, which only reflects the possible minimal size of a Linux kernel. If drivers included, it could be 15M+ LoC for Linux system. 
 
 Fig.3 shows the time elapsed of reading one page by walking thought the 4 levels of the page table while introspecting a 64-bit Linux guest VM. The time is an average of reading 500 consecutive pages. LibVMI in Mini-OS took 3.7 microseconds, while LibVMI in Linux took 5.7 microseconds, saving more than 30% of time.
 
 
 # Conclusion
-To briefly conclude the project, we have successfully ported the core functions of LibVMI into the tiny OS on Xen, Mini-OS. By customizing the XSM policy specifications and Xenstore permissions, a guest VM has been granted with permissions to introspect other guest VM via VMI technique. By customizing and cross compiling static libraries into Mini-OS, we have built LibVMI in a tiny OS, enabling a tiny VM to introspect both Linux and Windows guest VM. Evaluations show the code size is reduced by more than 50% and performance is improved by more than 30% compared to VMI operations on Dom0 of Xen.
+To briefly conclude the project, we have successfully ported the core functionalities of LibVMI into the tiny OS on Xen, Mini-OS. By customizing the XSM policy specifications and Xenstore permissions, a guest VM has been granted with permissions to introspect other guest VM via VMI technique. By customizing and cross compiling static libraries into Mini-OS, we have built LibVMI in a tiny OS, enabling a tiny VM to introspect both Linux and Windows guest VM. Evaluations show the code size is reduced by more than 50% and performance is improved by more than 30% compared to VMI operations on Dom0 of Xen.
 
 # Future Directions
 
@@ -169,4 +169,4 @@ To briefly conclude the project, we have successfully ported the core functions 
 
 # Acknowledgement
 
-Thanks to my mentors, Steven Maresca and Tamas K Lengyel, for accepting me as a student in GSoC this year. This is my first time at GSoC and this exciting project cannot be proceeded so far without your prompt, helpful instructions and graceful patience. Thanks to all Google Summer of Code committees to provide such a great opportunities for us to explore the world of open source!
+Thanks to my mentors, Steven Maresca and Tamas K Lengyel, for accepting me as a student in GSoC this year. This is my first time at GSoC and this exciting project cannot be proceeded so far without your prompt, helpful instructions and graceful patience. Thanks to all Google Summer of Code committees to provide such a great opportunity for us to explore the world of open source!
