@@ -63,6 +63,8 @@ First, Xen hypervisor isolates each guest VM from reading other VM's memory page
 
 To introspect a VM's memory from another guest VM, the first thing is to get permissions from the Xen hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. Although Xen hypervisor allow programmers to share memory pages between two VMs by grant tables, it requires the target VM to explicitly `offer` the page for sharing. Since entire target VM is not trusted and no changes should be made to the target VM. LibVMI uses foreign memory mapping hypercalls to remap memory pages from target VM to its own memory space. The permission of mapping a foreign page (target VM's page) to its own address space for a guest VM (or Dom0) are controlled by Xen Security Module (XSM). 
 
+Furthermore, Xen event channels allow guest VM to monitor its memory status in real time under help of hardware interrupts. A ring buffer is shared between hypervisor and the guest kernel to transfer event information. To access the ring buffer, XSM permission should also be granted. 
+
 [Xen Security Module](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK) (XSM) uses FLASK policies as in SELinux, to enforce Mandatory Access Control(MAC) between different domains. Each permission is default to be denied unless explicitly being allowed in the policy. Permissions are granted according to multiple categries the guest domain belongs to, such as the types, roles, users, and attributes of the guest domain [more](https://wiki.xenproject.org/wiki/Xen_Security_Modules_:_XSM-FLASK#Types.2C_roles.2C_users_and_attributes). 
 
 
