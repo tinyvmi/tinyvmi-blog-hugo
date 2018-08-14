@@ -38,4 +38,4 @@ color = "bg-black"
   featured_image = ""
   recent_posts_number = 3
   toc = true
-  custom_css = ["css/mycss.css"]
+  custom_css = ["/css/mycss.css"]
