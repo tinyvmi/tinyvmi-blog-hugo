@@ -59,9 +59,9 @@ Therefore, we propose to port LibVMI to the tiny Mini-OS, named as [TinyVMI](htt
 
 First, the hypervisor isolates each guest VM from reading other VM's memory pages. A guest VM should get enough permission before it can be used to introspect other VM's memory.  Second, LibVMI depends on serveral libraries that are not supported in the original Mini-OS. Therefore, in this project, we want solutions to overcome these two challenges.
 
-### Permissions of Accessing Other VM's Memory
+### Permissions in accessing other VM's memory
 
-To introspect a VM's memory from another guest VM, the first thing is to get permissions from the hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. Although the hypervisor allow programmers to share memory pages between two VMs by grant tables, it requires the target VM to explicitly `offer` the page for sharing. Since entire target VM is not trusted and no changes should be made to the target VM. LibVMI uses foreign memory mapping hypercalls to remap memory pages from target VM to its own memory space. The permission of mapping a foreign page (target VM's page) to its own address space for a guest VM (or Dom0) are controlled by Xen Security Module (XSM), which will be introduced below. 
+To introspect a VM's memory from another guest VM, the first thing is to get permissions from the hypervisor. By default, memory pages of each VM are strictly isolated with each other -- they are not allowed to access the memory pages of other VMs. Although the hypervisor allow programmers to share memory pages between two VMs by grant tables, it requires the target VM to explicitly `offer` the page for sharing. Since the entire target VM is not trusted and no changes should be made to the target VM. LibVMI uses foreign memory mapping hypercalls to remap memory pages from the target VM to its own memory space. The permission of mapping a foreign page (target VM's page) to its own address space for a guest VM (or Dom0) are controlled by the Xen Security Module (XSM), which will be introduced below. 
 
 Furthermore, Xen event channels allow guest VM to monitor its memory status in real time under help of hardware interrupts. A ring buffer is shared between hypervisor and the guest kernel to transfer event information. To access the ring buffer, XSM permission should also be granted. 
 
@@ -76,7 +76,7 @@ seclabel='system_u:system_r:domU_t1'
 
 will label the VM as type **domU_t1**, under role of **system_r**, and user of **system_u**, user **system_u**.  Type is the lowest level of category. Multiple types can be defined as one role multiple roles as one user.
 
-Permissions are granted based on the types of a VM. For example, the permission of ``map_read`` allow a domain to map other domain's memory with read only permission. The policy:
+Permissions are granted based on the types of a VM. For example, the permission of ``map_read`` allows a domain to map other domain's memory with read-only permission. The policy:
 
 ```
 allow domU_t1 domU_t2:mmu {map_read};
@@ -85,7 +85,7 @@ allow domU_t1 domU_t2:mmu {map_read};
 will allow a VM with type **domU_t1** to read the memory of another VM with type **domU_t2**.
 
 
-In addition to the permissions granted from XSM, we also need to the permission the read information from [Xenstore](https://wiki.xen.org/wiki/XenStore), which is used to get meta data of the target VM, such as getting the Domain ID from the domain's string name. Xenstore permission can be read via command
+In addition to the permissions granted from XSM, we also need the permission to read information from [Xenstore](https://wiki.xen.org/wiki/XenStore), which is used to get meta data of the target VM, such as getting the Domain ID from the domain's string name. Xenstore permission can be read via command
 ``xenstore-ls -p``:
 
 ```
@@ -117,13 +117,13 @@ xenstore-chmod -r '/local/domain' r8
 ### Build New Libraries into Mini-OS
 
 The next challenge is building new libraries into Mini-OS. 
-Mini-OS is a examplar minimal operating system designed to running on Xen. To keep the kernel small, there are only few libraries can be built in it: **newlib** for C language library, Xen related library such as **libxc** to communicate with the hypervisor, and **lwip** for basic networking. 
+Mini-OS is an exemplary minimal operating system. To keep the kernel small, there are only a few libraries that can be built in it: **newlib** for C language library, Xen related library such as **libxc** to communicate with the hypervisor, and **lwip** for basic networking. 
 
 To port LibVMI to Mini-OS, 2 more libraries are needed. These include one JSON library to parse Rekall profiles, [libjson-c](https://github.com/json-c/json-c), and one library with utility data structures, [GLib](https://wiki.gnome.org/Projects/GLib). 
 
 In theory, most libraries written in C language can be built into Mini-OS with the help of **newlib**, such as **libjson-c**. [This post](https://tinyvmi.github.io/gsoc-blog/post/w08-cross-compile-lib-in-minios) introduces how to build new libraries. However, some of them might need to be manually customized for MiniOS by eliminating the unsupported portions, such as [GLib](https://developer.gnome.org/glib/).
 
-Furthermore, security applications written in C++ programs can also be ported into Mini-OS. For example, [DRAKVUF](https://drakvuf.com/) is a binary analysis system built ontop of LibVMI and Xen. Portion of its code are in C++ language. To built those code in Mini-OS, we need to cross compile C++ standard libraries into the tiny kernel.
+Furthermore, security applications written in C++ programs can also be ported into Mini-OS. For example, [DRAKVUF](https://drakvuf.com/) is a binary analysis system built ontop of LibVMI and Xen. Portion of its code are in C++ language. To build these codes in Mini-OS, we need to cross compile C++ standard libraries into the tiny kernel.
 
 # Project Status & Results
 
@@ -159,7 +159,7 @@ Fig.3 shows the time elapsed of reading one page by walking thought the 4 levels
 
 
 # Conclusion
-To briefly conclude the project, we have successfully ported the core functionalities of LibVMI into the tiny OS on Xen, Mini-OS. By customizing the XSM policy specifications and Xenstore permissions, a guest VM has been granted with permissions to introspect other guest VM via VMI technique. By customizing and cross compiling static libraries into Mini-OS, we have built LibVMI in a tiny OS, enabling a tiny VM to introspect both Linux and Windows guest VM. Evaluations show the code size is reduced by more than 50% and performance is improved by more than 30% compared to VMI operations on Dom0 of hypervisor.
+To briefly conclude the project, we have successfully ported the core functionalities of LibVMI into the tiny OS on Xen, Mini-OS. By customizing the XSM policy specifications and Xenstore permissions, a guest VM has been granted with permissions to introspect another guest VM via VMI technique. By customizing and cross compiling static libraries into Mini-OS, we have built LibVMI in a tiny OS, enabling a tiny VM to introspect both Linux and Windows guest VM. Evaluations show the code size is reduced by more than 50% and performance is improved by more than 30% compared to VMI operations on Dom0 of hypervisor.
 
 # Future Directions
 
