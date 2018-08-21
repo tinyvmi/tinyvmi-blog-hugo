@@ -9,7 +9,7 @@ draft = "false"
 
 +++
 
-This post introduces the project I worked on with Honeynet Project at Google Summer of Code this year. The project of [TinyVMI](https://github.com/tinyvmi/tinyvmi) is to port a library ([LibVMI](http://libvmi.com)) into a tiny operating system ([Mini-OS](https://wiki.xenproject.org/wiki/Mini-OS)). After porting, LibVMI will have all its functionalities running inside a tiny virtual machine, which has much smaller size as well as higher performance compared to the same library running on a Linux OS.
+This post introduces the project I worked on with Honeynet Project at Google Summer of Code this year. The project of [TinyVMI](https://github.com/tinyvmi/tinyvmi) is to port a library ([LibVMI](http://libvmi.com)) into a tiny operating system ([Mini-OS](https://wiki.xenproject.org/wiki/Mini-OS)). After porting, LibVMI will have all its functionalities running inside a tiny virtual machine, which has a much smaller size as well as higher performance compared to the same library running on a Linux OS.
 
 # Introduction
 
@@ -20,7 +20,7 @@ Unikernels can be viewed as a minimized operating system with following features
 
 - No ring0/ring3, or kernel/user mode separation. Traditional operating systems, like Linux, separate programs into kernel mode and user mode to protect malicious users (applications) from accessing kernel memory. However, in unikernels like Mini-OS, there is only one mode, ring0, or kernel mode. This eliminates the burden of maintaining the context-switching between two modes. The code size of the kernel and runtime overhead are both reduced. 
 
-- Minimal set of libraries. Instead of shipping with many system/application libraries to provide a general purpose computing environment, a unikernel aims to be configured with a minimal set of libraries that are only necessary for the application runs in it, thus also called a library operating system. For example, in Mini-OS, users can configure with libc to write applications in C language. 
+- A minimal set of libraries. Instead of shipping with many system/application libraries to provide a general purpose computing environment, a unikernel aims to be configured with a minimal set of libraries that are only necessary for the application that runs in it, thus also called a library operating system. For example, in Mini-OS, users can configure with libc to write applications in C language. 
 
 <figure>
 <img src="/gsoc-blog/images/unikernel_minios.png" style="width:350px;"/>
@@ -30,17 +30,17 @@ Unikernels can be viewed as a minimized operating system with following features
 </figure>
 
 
-As shown in Fig.1, a unikernel is much smaller in size and eliminates all unnecessary tools and libraries, and even file systems from the OS, keeping only the application code and a tiny OS kernel. Such unikernels can be more efficient than traditional operating systems, especially for cloud platforms where each specialized application is usually managed in a standalone VM. The unikernels are supposed to be the next generation of cloud platform because they can achieve efficiency from several aspects. These include but not limited to:
+As shown in Fig.1, a unikernel is much smaller in size and eliminates all unnecessary tools and libraries, and even file systems from the OS, keeping only the application code and a tiny OS kernel. Such unikernels can be more efficient than traditional operating systems, especially for cloud platforms where each specialized application is usually managed in a standalone VM. The unikernels are supposed to be the next generation of cloud platforms because they can achieve efficiency from several aspects. These include but not limited to:
 
-1. Less memmory footprint. A unikernel requires significantly less memory than a traditional operating system. For example, a Mini-OS VM with LibVMI application only requires 64MB of main memory. However, a Linux VM would occupy 4GB of main memory to get average performance for a 64-bit Linux. The reduced memory footprints would allow a single physical machine to host more VMs and reduce the average cost per service. 
+1. Less memory footprint. A unikernel requires significantly less memory than a traditional operating system. For example, a Mini-OS VM with LibVMI application only requires 64MB of main memory. However, a Linux VM would occupy 4GB of main memory to get average performance for a 64-bit Linux. The reduced memory footprints would allow a single physical machine to host more VMs and reduce the average cost per service. 
 2. Faster booting. Since the memory footprint is small and no redundant libraries or kernel modules, a tiny OS would require significant less time to boot than a traditional OS. Booting a tinyOS is just like to start the application itself. 
 3. No kernel mode switching. OS kernels and applications are in a same chunk of memory region. CPU context switches caused by system calls are eliminated in unikernels. Therefore, the runtime performance of the unikernels can be much better than a traditional OS.
 4. More secure. Each unikernel's VM runs only one application. Isolation between  applications is enforced by the hypervisor, instead of a shared OS kernel. Compared to process isolation or container isolation in a shared Linux, the unikernel is more secure from the lower level isolation.
 5. Easy deployment, easy to use. Unikernel applications are build into a single binary to run directly as a VM image, which simplifies the deployment of the service. Unikernel applications are designed to be _single click and run_. All functionalities are customized at building time. Once deployed, the binary package requires no human modifications except the whole binary package being replaced. 
 
-In brief, Mini-OS is a tiny OS originated from Xen. As most other unikernels, Mini-OS could provide higher performance and more secure computing environment than a traditional operating system on the cloud.
+In brief, Mini-OS is a tiny OS originated from the Xen Project hypervisor. Like other unikernels, Mini-OS provides higher performance and a more secure computing environment than a traditional operating system on the cloud.
 
-### Why porting LibVMI to MiniOS
+### Why port LibVMI to MiniOS
 
 LibVMI is a secure critical library that could be used to view a target VM's raw memory from another guest VM, thus gaining a whole view of almost all the activities on the target VM. 
 
@@ -48,16 +48,16 @@ Traditionally, LibVMI runs in Dom0 on the hypervisor. However, Dom0 is already v
 
 1. Dom0 is a general purpose OS hosting many daily use applications, such as administractor tools. However, LibVMI is a special purpose library and usually not for daily use. Furthermore, there are almost no direct communication between LibVMI and other applications. Thus it is not necessary to install LibVMI in Dom0.
 
-2. Security risk. Dom0 is a critical domain for the hypervisor platform. Introducing new code base to the kernel would also introduce new security risk. Other applications on Dom0 could leverage kernel vulnerability to compromise LibVMI, and vice versa, a bug in LibVMI would possible crash other applications or even the entire Dom0 kernel.
+2. Security risk. Dom0 is a critical domain for the hypervisor platform. Introducing a new code base to the kernel would also introduce new security risks. Other applications on Dom0 could leverage kernel vulnerability to compromise LibVMI, and vice versa, a bug in LibVMI could crash other applications or even the entire Dom0 kernel.
 
-3. Performance overhead. As introduced above, a general purpose OS is large and unefficient to run a special purpose application. CPU mode switching, large memory footprints, and process scheduling all introduce overheads for Dom0.
+3. Performance overhead. As introduced above, a general purpose OS is large and inefficient to run a special purpose application. CPU mode switching, large memory footprints, and process scheduling all introduce overheads for Dom0.
   
 
 Therefore, we propose to port LibVMI to the tiny Mini-OS, named as [TinyVMI](https://github.com/tinyvmi/tinyvmi.git), to explore whether we can achieve the above benefits. 
 
 # Challenges
 
-First, the hypervisor isolates each guest VM from reading other VM's memory pages. A guest VM should get enough permission before it can be used to introspect other VM's memory.  Second, LibVMI depends on serveral libraries that are not supported in the original Mini-OS. Therefore, in this project, we seek for solutions to overcome the two challenges.
+First, the hypervisor isolates each guest VM from reading other VM's memory pages. A guest VM should get enough permission before it can be used to introspect other VM's memory.  Second, LibVMI depends on serveral libraries that are not supported in the original Mini-OS. Therefore, in this project, we want solutions to overcome these two challenges.
 
 ### Permissions of Accessing Other VM's Memory
 
@@ -169,4 +169,4 @@ To briefly conclude the project, we have successfully ported the core functional
 
 # Acknowledgement
 
-Thanks to my mentors, Steven Maresca and Tamas K Lengyel, for accepting me as a student in GSoC this year. This is my first time at GSoC and this exciting project cannot be proceeded so far without your prompt, helpful instructions and graceful patience. Thanks to all Google Summer of Code committees to provide such a great opportunity for us to explore the world of open source!
+Thanks to my mentors, Steven Maresca and Tamas K Lengyel, for accepting me as a student in GSoC this year. This is my first time at GSoC and this exciting project cannot be proceeded so far without your prompt, helpful instructions and graceful patience. Thanks to Zibby Keaton for the grammar checkings on this post. Thanks to all Google Summer of Code committees to provide such a great opportunity for us to explore the world of open source!
