@@ -76,7 +76,38 @@ Basically, you will need three parts of changes to make the library successfully
     Finally, we need to update the dependent list of target **tinyvmi**, so that every time we rebuild **tinyvmi**, the library will be built when necessary. 
 
 3. Makefile of Mini-OS ([xen-src/extras/mini-os/Makefile](https://github.com/tinyvmi/mini-os/blob/xen-4.10.0/Makefile)). In this Makefile, the library load flags **APP_LDLIBS** (for example, **-ljson-c**) will be given to finally link the static library into the Mini-OS application. To link libjson-c, the following line will do the trick([code](https://github.com/tinyvmi/mini-os/blob/c5cf2aa01a5cc7bc66a6d519bbc5933daa857411/Makefile#L147)):
-{{<highlight make>}} APP_LDLIBS += -ljson-c
+{{<highlight make>}} 
+# link json lib
+# enable this need to set CONFIG_JSON=y in minios.cfg
+
+ifeq ($(CONFIG_JSON),y)
+APP_LDLIBS += -ljansson
+APP_LDLIBS += -ljson-c
+endif
+
+# link gcc lib
+# enable this need to set CONFIG_JSON=y in minios.cfg
+
+ifeq ($(CONFIG_GCC),y)
+#############################################
+# LIBs for g++ gcc cross compiled in stubdom/Makefile.
+# libgcc
+# todo: the version number should be a var
+APP_LDLIBS += -L$(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/lib/gcc/$(MINIOS_TARGET_ARCH)-xen-elf/5.4.0 -whole-archive -lgcc -lgcov -no-whole-archive
+LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/lib/gcc/$(MINIOS_TARGET_ARCH)-xen-elf/5.4.0/libgcc.a
+LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/lib/gcc/$(MINIOS_TARGET_ARCH)-xen-elf/5.4.0/libgcov.a
+
+# libstdc++ libs
+APP_LDLIBS += -L$(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib -whole-archive -lstdc++ -lssp_nonshared -no-whole-archive
+LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libstdc++.a
+# LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libssp.a
+LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libssp_nonshared.a
+# LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libsupc++.a
+# LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libquadmath.a
+
+APP_LDLIBS += -L$(XEN_ROOT)/stubdom/gcc-newlib-patch -whole-archive -lgcc_newlib_patch -no-whole-archive
+LIBS += $(XEN_ROOT)/stubdom/gcc-newlib-patch/libgcc_newlib_patch.a
+endif # end CONFIG_GCC,y
 {{</highlight>}}
 
 Now we are ready to compile the library. You can either run make with the cross compile target:
@@ -97,7 +128,165 @@ If succeed, you will find the static library file (such as libjson-c.a) under th
 If errors occur, you might need to tweak the configurations and building options of the library by reading the documentation shipped with the library source code.
 
 
-## Example 2: TODO: cross compile GCC C++ standard library to Mini-OS. 
+## Example 2: cross compile GCC C++ standard library to Mini-OS. 
 
-- Configure command.
-- Makefile examples.
+#### Example app code
+
+Changed file: xen-src/stubdom/tinycpp/main.cpp
+
+{{<highlight C++>}}    
+
+#include <iostream>
+
+int main(void){
+
+    sleep(2);
+    std::cout << "hello in cpp !!! \n" << std::endl;
+
+    return 0;
+}
+
+
+
+
+
+{{</hightlight>}}
+
+#### Makefile of stubdom/
+Changed file: xen-src/stubdom/Makefile. Changes have three parts: a) cross compile binutils; b) a patch to newlib in Mini-OS. c) cross compile C++ libraries. 
+    {{<highlight make>}}    
+
+    ##############
+    # Cross-binutils
+    ##############
+
+    BINUTILS_VERSION=2.31
+    BINUTILS_URL="http://ftp.gnu.org/gnu/binutils"
+    binutils-$(BINUTILS_VERSION).tar.gz:
+        $(FETCHER) $@ $(BINUTILS_URL)/$@
+
+    binutils-$(BINUTILS_VERSION): binutils-$(BINUTILS_VERSION).tar.gz
+        tar xzf $<
+        touch $@
+
+    BINUTILS_STAMPFILE=$(CROSS_ROOT)/$(GNU_TARGET_ARCH)-xen-elf/bin/ar
+    .PHONY: cross-binutils
+    cross-binutils: $(BINUTILS_STAMPFILE)
+    $(BINUTILS_STAMPFILE): mk-headers-$(XEN_TARGET_ARCH) binutils-$(BINUTILS_VERSION) $(NEWLIB_STAMPFILE)
+        mkdir -p binutils-$(XEN_TARGET_ARCH)
+        ( cd binutils-$(XEN_TARGET_ARCH) && \
+        CC_FOR_TARGET="$(CC) $(TARGET_CPPFLAGS) $(TARGET_CFLAGS) $(NEWLIB_CFLAGS)" \
+        AR_FOR_TARGET=$(AR) \
+        LD_FOR_TARGET=$(LD) \
+        RANLIB_FOR_TARGET=$(RANLIB) \
+        ../binutils-$(BINUTILS_VERSION)/configure \
+            --prefix=$(CROSS_PREFIX) \
+            --verbose \
+            --target=$(GNU_TARGET_ARCH)-xen-elf \
+            --enable-interwork \
+            --enable-multilib \
+            --disable-nls --disable-shared --disable-threads \
+            --with-sysroot=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf \
+            --with-gcc --with-gun-as --with-gnu-ld && \
+        $(MAKE) DESTDIR= && \
+        $(MAKE) DESTDIR= install )
+
+    ###########
+    # gcc_newlib.patch
+    NEWLIB_PATCH_FOR_GCC=$(CURDIR)/gcc_newlib.patch/libgcc_newlib_patch.a
+
+    $(CURDIR)/gcc_newlib.patch/libgcc_newlib_patch.o: $(CURDIR)/gcc_newlib.patch/patch.c
+        $(CC) $(TARGET_CPPFLAGS) $(TARGET_CFLAGS) $(NEWLIB_CFLAGS) -c -o $@ $<
+
+    $(NEWLIB_PATCH_FOR_GCC): $(CURDIR)/gcc_newlib.patch/libgcc_newlib_patch.o
+        $(AR) cr $@ $^
+
+    ##############
+    # Cross-gcc
+    ##############
+
+    #gmp: https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz
+    #mpfr: https://ftp.gnu.org/gnu/mpfr/mpfr-4.0.1.tar.xz
+    #mpc: https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
+
+    #gcc: ftp://ftp.gnu.org/gnu/gcc/gcc-5.4.0/gcc-5.4.0.tar.gz
+
+    GCC_VERSION=5.4.0
+    GCC_URL="http://ftp.gnu.org/gnu/gcc/gcc-$(GCC_VERSION)"
+    gcc-$(GCC_VERSION).tar.gz:
+        $(FETCHER) $@ $(GCC_URL)/$@
+
+    gcc-$(GCC_VERSION): gcc-$(GCC_VERSION).tar.gz
+        tar xzf $<
+        cd $@ && ./contrib/download_prerequisites && cd -
+        touch $@
+
+    # TODO: this stampfile is not valid for make, 
+    # even without any changes to gcc, gcc will be 'recompiled' instead of keep the old build.
+    # why?
+    GCC_STAMPFILE=$(CROSS_ROOT)/lib/gcc/$(GNU_TARGET_ARCH)-xen-elf/$(GCC_VERSION)/libgcc.a
+    .PHONY: cross-gcc
+    cross-gcc: $(GCC_STAMPFILE)
+
+    $(GCC_STAMPFILE): mk-headers-$(XEN_TARGET_ARCH) gcc-$(GCC_VERSION) $(NEWLIB_STAMPFILE) $(BINUTILS_STAMPFILE)
+        mkdir -p gcc-$(XEN_TARGET_ARCH)
+        ( cd gcc-$(XEN_TARGET_ARCH) && \
+        PATH=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf/bin:$(CROSS_PREFIX)/bin:$(PATH) \
+        CC_FOR_TARGET="$(CC) $(TARGET_CPPFLAGS) $(TARGET_CFLAGS) $(NEWLIB_CFLAGS)" \
+        AR=$(AR) \
+        AR_FOR_TARGET=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf/bin/ar \
+        LD_FOR_TARGET=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf/bin/ld  \
+        RANLIB_FOR_TARGET=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf/bin/ranlib \
+        ../gcc-$(GCC_VERSION)/configure \
+            --prefix=$(CROSS_PREFIX) \
+            --verbose \
+            --target=$(GNU_TARGET_ARCH)-xen-elf \
+            --enable-multilib \
+            --enable-languages=c,c++ \
+            --with-newlib \
+            --disable-nls \
+            --disable-shared --disable-threads \
+            --with-gnu-as \
+            --with-as=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf/bin/as \
+            --with-gnu-ld \
+            --with-ld=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf/bin/ld \
+            --with-sysroot=$(CROSS_PREFIX)/$(GNU_TARGET_ARCH)-xen-elf && \
+        $(MAKE) DESTDIR= all-gcc && \
+        $(MAKE) DESTDIR= all-target-libgcc && \
+        $(MAKE) DESTDIR= install-gcc && \
+        $(MAKE) DESTDIR= install-target-libgcc && \
+        $(MAKE) DESTDIR= && \
+        $(MAKE) DESTDIR= install )
+
+    {{</highlight>}}
+
+#### Makefile of Mini-OS
+Changed file: xen-src/extras/mini-os/Makefile. Changes are mainly to add static library path to the linker:
+
+    {{<highlight make>}} 
+    # link gcc lib
+    # enable this need to set CONFIG_JSON=y in minios.cfg
+
+    ifeq ($(CONFIG_GCC),y)
+    #############################################
+    # LIBs for g++ gcc cross compiled in stubdom/Makefile.
+    # libgcc
+    # todo: the version number should be a var
+    APP_LDLIBS += -L$(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/lib/gcc/$(MINIOS_TARGET_ARCH)-xen-elf/5.4.0 -whole-archive -lgcc -lgcov -no-whole-archive
+    LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/lib/gcc/$(MINIOS_TARGET_ARCH)-xen-elf/5.4.0/libgcc.a
+    LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/lib/gcc/$(MINIOS_TARGET_ARCH)-xen-elf/5.4.0/libgcov.a
+
+    # libstdc++ libs
+    APP_LDLIBS += -L$(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib -whole-archive -lstdc++ -lssp_nonshared -no-whole-archive
+    LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libstdc++.a
+    # LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libssp.a
+    LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libssp_nonshared.a
+    # LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libsupc++.a
+    # LIBS += $(XEN_ROOT)/stubdom/cross-root-$(MINIOS_TARGET_ARCH)/$(MINIOS_TARGET_ARCH)-xen-elf/lib/libquadmath.a
+
+    APP_LDLIBS += -L$(XEN_ROOT)/stubdom/gcc-newlib-patch -whole-archive -lgcc_newlib_patch -no-whole-archive
+    LIBS += $(XEN_ROOT)/stubdom/gcc-newlib-patch/libgcc_newlib_patch.a
+    endif # end CONFIG_GCC,y
+    {{</highlight>}}
+
+You also need to add a line of ``CONFIG_GCC=y`` to the minios config file under your app source code. such as ``xen-src/stubdom/tinycpp/minios.cfg``.
