@@ -134,7 +134,7 @@ If errors occur, you might need to tweak the configurations and building options
 
 Changed file: xen-src/stubdom/tinycpp/main.cpp
 
-{{<highlight C++>}}    
+{{<highlight CPP>}}    
 
 #include <iostream>
 
@@ -146,11 +146,7 @@ int main(void){
     return 0;
 }
 
-
-
-
-
-{{</hightlight>}}
+{{</highlight>}}
 
 #### Makefile of stubdom/
 Changed file: xen-src/stubdom/Makefile. Changes have three parts: a) cross compile binutils; b) a patch to newlib in Mini-OS. c) cross compile C++ libraries. 
